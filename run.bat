@@ -1,3 +1,3 @@
 cd src
-poetry run python -m python_template
+poetry run python -m wasm_cli_runner
 @REM pause

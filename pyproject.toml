@@ -1,12 +1,13 @@
 [tool.poetry]
-name = ""
+name = "wasm_cli_runner"
 version = "0.0.1"
-description = ""
-authors = [""]
+description = "Run WebAssembly Binary and Text files in the command line."
+authors = ["miile7"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+wasmtime = "^3.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "*"
