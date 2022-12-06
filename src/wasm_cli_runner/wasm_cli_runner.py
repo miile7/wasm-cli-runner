@@ -1,7 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
-from os import path
-from typing import Any, Generator, List, TypedDict, Union
+from typing import Any, Callable, Generator, List, TypedDict, Union
 from typing_extensions import Unpack
 from wasmtime import Store, Module, Instance, Func, FuncType, ValType
 
@@ -53,15 +52,13 @@ def get_wasm_code_from_str(code: str) -> Union[bytes, str]:
 
 
 def get_wasm_file_content(file_path: str) -> Union[str, bytes]:
-    ext = path.splitext(file_path)
-
     with open(file_path, "rb") as f:
         content = f.read()
         if content[:4] == WASM_BINARY_MAGIC:
-            logger.debug(f"Assuming WebAssembly Binary due to first 4 bytes.")
+            logger.debug("Assuming WebAssembly Binary due to first 4 bytes.")
             return content
         else:
-            logger.debug(f"Assuming WebAssembly Text due missing WASM_BINARY_MAGIC.")
+            logger.debug("Assuming WebAssembly Text due missing WASM_BINARY_MAGIC.")
             return content.decode("utf-8")
 
 
@@ -71,11 +68,13 @@ def get_wasm_function_signatures(funcs: List[Func]) -> Generator[str, None, None
 
 
 def add_wasm_function(
-    store: Store, params: List[ValType], results: List[ValType], func: callable
+    store: Store, params: List[ValType], results: List[ValType], func: Callable
 ) -> Func:
     str_params = (f"(param {str(p)})" for p in params)
     str_results = (f"(result {str(p)})" for p in params)
-    logger.debug(f"Adding ({func.__name__} {' '.join(str_params)} {' '.join(str_results)})")
+    logger.debug(
+        f"Adding ({func.__name__} {' '.join(str_params)} {' '.join(str_results)})"
+    )
     return Func(store, FuncType(params, results), func)
 
 
@@ -101,10 +100,15 @@ def run(args: Namespace) -> None:
 
     start_functions = ["run", "main", "start"]
     for start_function_name in start_functions:
-        if start_function_name in instance.exports(store):
-            logger.debug(f"Running WASM function {start_function_name}.")
-            instance.exports(store)[start_function_name]()
-            break
+        try:
+            func = instance.exports(store)[start_function_name]
+
+            if isinstance(func, Func):
+                logger.debug(f"Running WASM function {start_function_name}.")
+                func(store)
+                break
+        except (KeyError, IndexError):
+            pass
 
 
 def get_arg_parser() -> ArgumentParser:
@@ -134,7 +138,10 @@ def get_arg_parser() -> ArgumentParser:
         "--inline",
         "-i",
         dest="inline",
-        help="Use this flag to interpret the WASM_FILE as the content of a file (interpret directly)",
+        help=(
+            "Use this flag to interpret the WASM_FILE as the content of a file"
+            " (interpret the argument directly)"
+        ),
         action="store_true",
         default=False
     )
